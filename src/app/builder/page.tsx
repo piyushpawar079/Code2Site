@@ -122,19 +122,29 @@ export default function BuilderPage(){
           case StepType.CreateFile: {
             if (!step.path) break;
             
+            let flag = false
             const path = step.path;
             if(path.includes('/')) {
               const folderName = path.split('/')[0];
               const fileName = path.split('/')[1];
               const folderNode = findNodeByPath(newStructure, `/${folderName}`);
               if (folderNode) {
-                // folderNode.children.push({ 
-                //   name: fileName, 
-                //   type: 'file', 
-                //   path: `/my-app/${path}`, 
-                //   content: step.code || '' 
-                // });
-                
+
+                folderNode.children.map((ch) => {
+                  if(ch.name == fileName){
+                    flag = true
+                    ch.content = step.code
+                  }
+                })
+
+                if(!flag){
+                  folderNode.children.push({ 
+                    name: fileName, 
+                    type: 'file', 
+                    path: `/my-app/${path}`, 
+                    content: step.code || '' 
+                  });
+                }
               }
               else{
                 // If folder doesn't exist, create it
