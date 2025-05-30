@@ -35,38 +35,7 @@ export default function BuilderPage(){
         name: 'src',
         type: 'folder',
         path: '/my-app/src',
-        children: [
-          { 
-            name: 'App.tsx',
-            type: 'file', 
-            path: '/my-app/src/App.tsx', 
-            content: 'import React from "react";\n\nfunction App() {\n  return (\n    <div className="App">\n      <h1>Hello World!</h1>\n    </div>\n  );\n}\n\nexport default App;' 
-          },
-          { 
-            name: 'index.tsx', 
-            type: 'file', 
-            path: '/my-app/src/index.tsx', 
-            content: 'import React from "react";\nimport ReactDOM from "react-dom/client";\nimport App from "./App";\n\nconst root = ReactDOM.createRoot(document.getElementById("root")!);\nroot.render(<App />);' 
-          },
-          { 
-            name: 'styles.css', 
-            type: 'file', 
-            path: '/my-app/src/styles.css',
-            content: 'body {\n  margin: 0;\n  font-family: -apple-system, BlinkMacSystemFont, sans-serif;\n}\n\n.App {\n  text-align: center;\n  padding: 20px;\n}' 
-          }
-        ]
-      },
-      { 
-        name: 'package.json', 
-        type: 'file', 
-        path: '/my-app/package.json', 
-        content: '{\n  "name": "my-app",\n  "version": "1.0.0",\n  "dependencies": {\n    "react": "^18.0.0",\n    "react-dom": "^18.0.0"\n  }\n}' 
-      },
-      { 
-        name: 'README.md', 
-        type: 'file', 
-        path: '/my-app/README.md', 
-        content: '# My App\n\nGenerated with AI Builder\n\n## Getting Started\n\n```bash\nnpm install\nnpm start\n```' 
+        children: []
       }
     ]
   };
@@ -78,22 +47,24 @@ export default function BuilderPage(){
     if (structure.path === targetPath) {
       return structure;
     }
-    
-    // if (structure.children) {
-    //   for (const child of structure.children) {
-    //     const found = findNodeByPath(child, targetPath);
-    //     if (found) return found;
-    //   }
-    // }
-
-    // implement the feature using while loop not recursion
-    while( structure.children && structure.children.length > 0 && structure.path !== targetPath) {
-      for (const child of structure.children) {
-        if (child.path === targetPath) {
-          return child;
-        }
+    if (structure.children) {
+      if(structure.name === targetPath.replace(/^\//, '')) {
+        return structure;
       }
-      break; // exit the loop if no children found
+      for (const child of structure.children) {
+        const found = findNodeByPath(child, targetPath);
+        if (found) return found;
+      }
+    }
+
+    //if the path is not found, create the folder and return the full path
+    if(!targetPath.startsWith('/')) {
+    
+      const pathParts = targetPath.split('/')[0]
+      if (pathParts.length > 0) {
+        const parentFolder = createNestedFolders(structure, pathParts, '/my-app');
+        return parentFolder
+      }
     }
     
     return null;
@@ -117,38 +88,26 @@ export default function BuilderPage(){
   }, []);
 
   // Helper function to create nested folder structure
-  const createNestedFolders = useCallback((structure: any, pathParts: string[], basePath: string) => {
+  const createNestedFolders = useCallback((structure: any, pathParts: string, basePath: string) => {
     let currentNode = structure;
     let currentPath = basePath;
+
+    currentPath = currentPath === '/' ? `/${pathParts}` : `${currentPath}/${pathParts}`;
+    console.log('Creating base path:', currentPath);
+    console.log('Path parts:', pathParts);
+    console.log('Current node:', currentNode);
+    currentNode.children.push({
+      name: pathParts,
+      type: 'folder',
+      path: currentPath,
+      children: []
+    })
     
-    for (const part of pathParts) {
-      currentPath = currentPath === '/' ? `/${part}` : `${currentPath}/${part}`;
-      
-      let existingChild = currentNode.children?.find((child: any) => child.name === part);
-      
-      if (!existingChild) {
-        existingChild = {
-          name: part,
-          type: 'folder',
-          path: currentPath,
-          children: []
-        };
-        
-        if (!currentNode.children) {
-          currentNode.children = [];
-        }
-        currentNode.children.push(existingChild);
-      }
-      
-      currentNode = existingChild;
-    }
-    
-    return currentNode;
+    return currentNode.children[currentNode.children.length - 1]; // Return the last created folder node
   }, []);
 
   // Execute a single step
   const executeStep = useCallback(async (step: Step, stepIndex: number) => {
-    console.log(`Executing step ${stepIndex + 1}:`, step.title);
     
     // Update step status to in-progress
     setSteps(prev => {
@@ -160,7 +119,7 @@ export default function BuilderPage(){
     setCurrentStep(stepIndex);
 
     // Simulate execution time
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // await new Promise(resolve => setTimeout(resolve, 1000));
 
     setFileStructure(prevStructure => {
       const newStructure = JSON.parse(JSON.stringify(prevStructure)); // Deep clone
@@ -170,41 +129,40 @@ export default function BuilderPage(){
           case StepType.CreateFile: {
             if (!step.path) break;
             
-            // Parse the path
-            const pathParts = step.path.split('/').filter(part => part !== '');
-            const fileName = pathParts.pop();
-            const folderPath = pathParts.length > 0 ? `/${pathParts.join('/')}` : '/my-app';
-            
-            // Find or create the parent folder
-            let parentFolder = findNodeByPath(newStructure, folderPath);
-            
-            if (!parentFolder && pathParts.length > 0) {
-              // Create nested folder structure if it doesn't exist
-              const baseFolderParts = pathParts.slice(0, -pathParts.length + 1); // Start from root
-              const nestedFolderParts = pathParts.slice(1); // Skip root
-              
-              parentFolder = createNestedFolders(newStructure, nestedFolderParts, '/my-app');
-            } else if (!parentFolder) {
-              parentFolder = newStructure; // Use root if no specific folder
-            }
-            
-            // Add the new file
-            if (parentFolder && fileName) {
-              if (!parentFolder.children) {
-                parentFolder.children = [];
+            console.log('This is the step:', step);
+            const path = step.path;
+            if(path.includes('/')) {
+              const folderName = path.split('/')[0];
+              const fileName = path.split('/')[1];
+              const folderNode = findNodeByPath(newStructure, `/${folderName}`);
+              if (folderNode) {
+                folderNode.children.push({ 
+                  name: fileName, 
+                  type: 'file', 
+                  path: `/my-app/${path}`, 
+                  content: step.code || '' 
+                });
               }
-              
-              // Check if file already exists
-              const existingFile = parentFolder.children.find((child: any) => child.name === fileName);
-              if (!existingFile) {
-                parentFolder.children.push({
-                  name: fileName,
+              else{
+                // If folder doesn't exist, create it
+                const newFolder = createNestedFolders(newStructure, folderName, '/my-app');
+                newFolder.children.push({ 
+                  name: fileName, 
                   type: 'file',
-                  path: step.path,
-                  content: step.code || ''
+                  path: `/my-app/${path}`, 
+                  content: step.code || '' 
                 });
               }
             }
+            else {
+              newStructure.children.push({ 
+                name: path, 
+                type: 'file',
+                path: `/my-app/${path}`,
+                content: step.code || ''
+              });
+            }
+            console.log('File created:', step.path);
             break;
           }
           
@@ -269,6 +227,8 @@ export default function BuilderPage(){
       
       const pendingSteps = steps.filter(step => step.status === 'pending');
       if (pendingSteps.length === 0) return;
+
+      // console.log('Executing pending steps:', pendingSteps.map(step => step.title).join(', '));
       
       setIsExecutingSteps(true);
       
@@ -308,10 +268,6 @@ export default function BuilderPage(){
       const response = await axios.post('/api/template', { userPrompt: userPrompt });
       const { uiPrompt, prompt } = response.data;
       
-      console.log('UI Prompt:', uiPrompt);
-      console.log('Prompt:', prompt);
-
-      console.log('Generating steps from UI Prompt:', parseXml(uiPrompt[0]));
 
       const parsedSteps = parseXml(uiPrompt[0]).map(step => ({
           ...step,
