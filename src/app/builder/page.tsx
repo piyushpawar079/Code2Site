@@ -42,7 +42,6 @@ export default function BuilderPage(){
 
   const [fileStructure, setFileStructure] = useState(initialFileStructure);
 
-  // Helper function to find a node in the file structure by path
   const findNodeByPath = useCallback((structure: any, targetPath: string) => {
     if (structure.path === targetPath) {
       return structure;
@@ -57,7 +56,6 @@ export default function BuilderPage(){
       }
     }
 
-    //if the path is not found, create the folder and return the full path
     if(!targetPath.startsWith('/')) {
     
       const pathParts = targetPath.split('/')[0]
@@ -70,7 +68,6 @@ export default function BuilderPage(){
     return null;
   }, []);
 
-  // Helper function to find parent node and child index
   const findParentAndIndex = useCallback((structure: any, targetPath: string): { parent: any; index: number } | null => {
     if (structure.children) {
       const childIndex = structure.children.findIndex((child: any) => child.path === targetPath);
@@ -87,15 +84,11 @@ export default function BuilderPage(){
     return null;
   }, []);
 
-  // Helper function to create nested folder structure
   const createNestedFolders = useCallback((structure: any, pathParts: string, basePath: string) => {
     let currentNode = structure;
     let currentPath = basePath;
 
     currentPath = currentPath === '/' ? `/${pathParts}` : `${currentPath}/${pathParts}`;
-    console.log('Creating base path:', currentPath);
-    console.log('Path parts:', pathParts);
-    console.log('Current node:', currentNode);
     currentNode.children.push({
       name: pathParts,
       type: 'folder',
@@ -119,7 +112,7 @@ export default function BuilderPage(){
     setCurrentStep(stepIndex);
 
     // Simulate execution time
-    // await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     setFileStructure(prevStructure => {
       const newStructure = JSON.parse(JSON.stringify(prevStructure)); // Deep clone
@@ -129,19 +122,19 @@ export default function BuilderPage(){
           case StepType.CreateFile: {
             if (!step.path) break;
             
-            console.log('This is the step:', step);
             const path = step.path;
             if(path.includes('/')) {
               const folderName = path.split('/')[0];
               const fileName = path.split('/')[1];
               const folderNode = findNodeByPath(newStructure, `/${folderName}`);
               if (folderNode) {
-                folderNode.children.push({ 
-                  name: fileName, 
-                  type: 'file', 
-                  path: `/my-app/${path}`, 
-                  content: step.code || '' 
-                });
+                // folderNode.children.push({ 
+                //   name: fileName, 
+                //   type: 'file', 
+                //   path: `/my-app/${path}`, 
+                //   content: step.code || '' 
+                // });
+                
               }
               else{
                 // If folder doesn't exist, create it
@@ -162,7 +155,6 @@ export default function BuilderPage(){
                 content: step.code || ''
               });
             }
-            console.log('File created:', step.path);
             break;
           }
           
@@ -195,7 +187,6 @@ export default function BuilderPage(){
           }
           
           case StepType.RunScript: {
-            console.log('Running script:', step.code);
             // For scripts, we might want to show output or logs
             // This could be extended to actually execute certain types of scripts
             break;
@@ -228,7 +219,6 @@ export default function BuilderPage(){
       const pendingSteps = steps.filter(step => step.status === 'pending');
       if (pendingSteps.length === 0) return;
 
-      // console.log('Executing pending steps:', pendingSteps.map(step => step.title).join(', '));
       
       setIsExecutingSteps(true);
       
@@ -266,7 +256,8 @@ export default function BuilderPage(){
 
     try {
       const response = await axios.post('/api/template', { userPrompt: userPrompt });
-      const { uiPrompt, prompt } = response.data;
+      const { uiPrompt, prompt1 } = response.data;
+      const prompt2 = response.data?.promtp2;
       
 
       const parsedSteps = parseXml(uiPrompt[0]).map(step => ({
@@ -276,6 +267,40 @@ export default function BuilderPage(){
       
       setSteps(parsedSteps);
       setCurrentStep(0);
+
+      const messages = [
+          {
+            role: "user",
+            parts: [
+              {
+                text: prompt1
+              },
+              {
+                text: userPrompt
+              }
+            ]
+          }
+        ]
+
+        if(prompt2){
+          messages[0].parts.push({
+            text: prompt2
+          })
+        }
+      
+      const nextSteps = await axios.post('/api/chat', {
+        messages
+      });
+
+      const nextStepsText = nextSteps.data.text;
+      console.log("NextSteps are: ", nextStepsText)
+      const nextStepsParsed = parseXml(nextStepsText).map(step => ({
+        ...step,
+        status: "pending" as const
+      }));
+      setSteps(prevSteps => [...prevSteps, ...nextStepsParsed]);
+      console.log('Generated steps:', nextStepsParsed);
+
       setHasGenerated(true);
       setIsGenerating(false);
     } catch (error) {

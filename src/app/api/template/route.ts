@@ -36,19 +36,21 @@ export async function POST(request: NextResponse) {
         if( projectType == 'react' ) {
             return NextResponse.json({
                 uiPrompt: [reactBasePrompt],
-                prompt: [reactBasePrompt, basePrompt]
+                prompt1: reactBasePrompt,
+                prompt2: basePrompt
             });
         }
         else if( projectType == 'node' ) {
             return NextResponse.json({
                 uiPrompt: [nodeBasePrompt],
-                prompt: [nodeBasePrompt]
+                prompt1: nodeBasePrompt
             });
         }
         else if( projectType == 'next' ) {
             return NextResponse.json({
                 uiPrompt: [nextBasePrompt],
-                prompt: [nextBasePrompt, basePrompt]
+                prompt1: nextBasePrompt,
+                prompt2: basePrompt
             });
         }
         else {

@@ -17,25 +17,35 @@ export async function POST(request: NextRequest) {
         // messages.push({"role": "system", "content": getSystemPrompt()});
 
         console.log("Messages: ", messages);
+        console.log("Parts of message: ", messages[0].parts)
+        console.log("Text inside parts: ", messages[0].parts[0])
         const ai = new GoogleGenAI({apiKey: process.env.API_KEY!});
-        const response = await ai.models.generateContentStream({
+        // const response = await ai.models.generateContentStream({
+        //     model: "gemini-2.0-flash",
+        //     contents: messages,
+        //     config: {
+        //         systemInstruction: getSystemPrompt(),
+        //         temperature: 0.1,
+        //     },
+        // });
+
+        const response = await ai.models.generateContent({
             model: "gemini-2.0-flash",
             contents: messages,
-            config: {
+            config:{
                 systemInstruction: getSystemPrompt(),
-                temperature: 0.1,
-            },
-        });
-        // console.log(response.text);
+                temperature: 0.3
+            }
+        })
 
-        for await (const chunk of response) {
-            console.log(chunk.candidates[0].content?.parts[0].text);
-        }
+        // for await (const chunk of response) {
+        //     console.log(chunk.candidates[0].content?.parts[0].text);
+        // }
 
-        // console.log("Response Text: ", response.text);
+        console.log("Response Text: ", response.text);
 
         return new Response(
-            JSON.stringify({ text: response }),
+            JSON.stringify({ text: response.text }),
         );
         
     } catch (error) {
