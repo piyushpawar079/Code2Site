@@ -1,6 +1,6 @@
 import Editor from '@monaco-editor/react';
 
-export default function MonacoEditor ({ file }) {
+export default function MonacoEditor ({ file }: { file: { content?: string } }) {
   return(
     <Editor
       height="100%"

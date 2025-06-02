@@ -1,7 +1,8 @@
 import React from 'react';
 import { CheckCircle, Circle, Clock } from 'lucide-react';
+import { Step } from '@/types/steps';
 
-export default function StepsList({ steps, currentStep }) {
+export default function StepsList({ steps, currentStep }: { steps: Step[], currentStep: number }) {
   let Id = 0;
   return (
     <div className="bg-gray-900 rounded-lg shadow-lg p-4 h-full overflow-auto">
