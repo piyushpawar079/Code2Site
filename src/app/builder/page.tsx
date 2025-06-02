@@ -15,7 +15,7 @@ import { useFileOperations } from '@/hooks/useFileOperations';
 import { useStepExecution } from '@/hooks/useStepExecution';
 
 // Services and Utils
-import { generateWebsiteSteps } from '@/services/apiService';
+import { addNewFeatures, generateWebsiteSteps } from '@/services/apiService';
 import { setupWebContainer } from '@/utils/webContainerUtils';
 import { Step } from '@/types/steps';
 
@@ -69,7 +69,6 @@ export default function BuilderPage() {
   // WebContainer initialization
   useEffect(() => {
     if (webContainer && !webContainerReady) {
-      console.log('WebContainer is ready');
       setWebContainerReady(true);
     }
   }, [webContainer, webContainerReady]);
@@ -83,8 +82,7 @@ export default function BuilderPage() {
       try {
         const { convertToWebContainerMount } = await import('@/utils/webContainerUtils');
         const mountStructure = convertToWebContainerMount(fileStructure);
-        console.log('Auto-mounting updated file structure');
-        await webContainer.mount(mountStructure);
+        await webContainer.mount(mountStructure as any);
       } catch (error) {
         console.error('Error auto-mounting files:', error);
       }
@@ -111,8 +109,8 @@ export default function BuilderPage() {
       
       // Add additional steps
       setSteps(prevSteps => [...prevSteps, ...additionalSteps]);
-      console.log('Generated steps:', [...initialSteps, ...additionalSteps]);
 
+      setUserPrompt('');
       setHasGenerated(true);
       setIsGenerating(false);
     } catch (error) {
@@ -129,7 +127,6 @@ export default function BuilderPage() {
 
     try {
       setIsPreviewLoading(true);
-      console.log('Starting preview setup...');
       
       await setupWebContainer(
         webContainer, 
@@ -142,6 +139,26 @@ export default function BuilderPage() {
       setIsPreviewLoading(false);
     }
   };
+
+  const handleNewRequest = async (newPrompt: string) => {
+    if (!newPrompt.trim()) return;
+    setIsGenerating(true);
+    try {
+      const { newSteps } = await addNewFeatures(newPrompt);
+      
+      // Append new steps to existing ones
+      setSteps([...newSteps]);
+      
+      setCurrentStep(0);
+
+      setUserPrompt('');
+      setHasGenerated(true);
+      setIsGenerating(false);
+    } catch (error) {
+      console.error('Error adding new features:', error);
+      setIsGenerating(false);
+    }
+  }
 
   const onBackHome = () => {
     // Clean up WebContainer
@@ -178,6 +195,7 @@ export default function BuilderPage() {
           userPrompt={userPrompt}
           setUserPrompt={setUserPrompt}
           handleGenerate={handleGenerate}
+          addNewFeatures={handleNewRequest}
           isGenerating={isGenerating}
           isExecutingSteps={isExecutingSteps}
           hasGenerated={hasGenerated}

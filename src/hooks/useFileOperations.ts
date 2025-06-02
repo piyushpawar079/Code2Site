@@ -13,7 +13,7 @@ interface fileItems {
 export const useFileOperations = (initialFileStructure: fileItems) => {
   const [fileStructure, setFileStructure] = useState<fileItems>(initialFileStructure);
 
-  const findNodeByPath = useCallback((structure: any, targetPath: string) => {
+  const findNodeByPath = useCallback((structure: any, targetPath: string): any | null => {
     if (structure.path === targetPath) {
       return structure;
     }

@@ -17,7 +17,7 @@ export default function Header({ onBackHome, isExecutingSteps }: HeaderProps) {
           className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
         >
           <Zap size={24} />
-          <span className="text-xl font-bold">Bolt Clone</span>
+          <span className="text-xl font-bold">Code2Site</span>
         </button>
         
         <div className="flex items-center gap-4">

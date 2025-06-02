@@ -16,9 +16,6 @@ export async function POST(request: NextRequest) {
 
         // messages.push({"role": "system", "content": getSystemPrompt()});
 
-        console.log("Messages: ", messages);
-        console.log("Parts of message: ", messages[0].parts)
-        console.log("Text inside parts: ", messages[0].parts[0])
         const ai = new GoogleGenAI({apiKey: process.env.API_KEY!});
         // const response = await ai.models.generateContentStream({
         //     model: "gemini-2.0-flash",
@@ -42,7 +39,6 @@ export async function POST(request: NextRequest) {
         //     console.log(chunk.candidates[0].content?.parts[0].text);
         // }
 
-        console.log("Response Text: ", response.text);
 
         return new Response(
             JSON.stringify({ text: response.text }),

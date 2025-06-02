@@ -176,6 +176,5 @@ export function parseXml(response: string): Step[] {
     }
   }
 
-  console.log('Parsed steps:', steps);
   return steps;
 }

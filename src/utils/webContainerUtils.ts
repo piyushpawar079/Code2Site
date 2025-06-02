@@ -65,7 +65,6 @@ export const setupWebContainer = async (
     
     // 1. First mount the file structure
     const mountStructure = convertToWebContainerMount(fileStructure);
-    console.log('Mounting structure:', mountStructure);
     await webContainer.mount(mountStructure);
 
     // 2. Check if package.json exists, if not create a basic one
@@ -76,7 +75,6 @@ export const setupWebContainer = async (
     }
 
     // 3. Install dependencies
-    console.log('Installing dependencies...');
     const installProcess = await webContainer.spawn('npm', ['install']);
     
     const installExitCode = await installProcess.exit;
@@ -87,12 +85,10 @@ export const setupWebContainer = async (
     }
 
     // 4. Start the development server
-    console.log('Starting development server...');
     const devProcess = await webContainer.spawn('npm', ['run', 'dev']);
     
     // 5. Listen for server-ready event
     webContainer.on('server-ready', (port: number, url: string) => {
-      console.log(`Server ready on port ${port}: ${url}`);
       setUrl(url);
       setIsLoading?.(false);
     });
@@ -100,7 +96,6 @@ export const setupWebContainer = async (
     // 6. Handle process output for debugging
     devProcess.output.pipeTo(new WritableStream({
       write(data) {
-        console.log('Dev server output:', data);
       }
     }));
 
@@ -181,7 +176,6 @@ export const setupReactWebContainer = async (
     const devProcess = await webContainer.spawn('npm', ['run', 'dev']);
     
     webContainer.on('server-ready', (port: number, url: string) => {
-      console.log(`React server ready: ${url}`);
       setUrl(url);
       setIsLoading?.(false);
     });
