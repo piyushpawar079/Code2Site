@@ -135,9 +135,8 @@ export default function CodeEditorPanel({
       <div className="flex-1 p-4">
         {activeTab === 'code' ? (
           <MonacoEditor
-            value={selectedFile?.content || '// Select a file to view its content'}
-            language="typescript"
-            theme="vs-dark"
+            file={selectedFile || '// Select a file to view its content'}
+            
           />
         ) : (
           <div className="w-full h-full bg-white rounded-lg border border-gray-700 overflow-hidden relative">

@@ -26,14 +26,6 @@ export const useFileOperations = (initialFileStructure: fileItems) => {
         if (found) return found;
       }
     }
-
-    if(!targetPath.startsWith('/')) {
-      const pathParts = targetPath.split('/')[0]
-      if (pathParts.length > 0) {
-        const parentFolder = createNestedFolders(structure, pathParts, '/my-app');
-        return parentFolder
-      }
-    }
     
     return null;
   }, []);
@@ -54,19 +46,43 @@ export const useFileOperations = (initialFileStructure: fileItems) => {
     return null;
   }, []);
 
-  const createNestedFolders = useCallback((structure: any, pathParts: string, basePath: string) => {
+  const ensureDirectoryExists = useCallback((structure: any, dirPath: string, basePath: string = '/my-app') => {
+    const pathParts = dirPath.split('/').filter(part => part !== '');
     let currentNode = structure;
     let currentPath = basePath;
 
-    currentPath = currentPath === '/' ? `/${pathParts}` : `${currentPath}/${pathParts}`;
-    currentNode.children.push({
-      name: pathParts,
-      type: 'folder',
-      path: currentPath,
-      children: []
-    })
+    for (const part of pathParts) {
+      currentPath = currentPath === '/' ? `/${part}` : `${currentPath}/${part}`;
+      
+      // Check if directory already exists
+      let existingNode = null;
+      if (currentNode.children) {
+        existingNode = currentNode.children.find((child: any) => 
+          child.name === part && child.type === 'folder'
+        );
+      }
+
+      if (!existingNode) {
+        // Create the directory if it doesn't exist
+        if (!currentNode.children) {
+          currentNode.children = [];
+        }
+        
+        const newFolder = {
+          name: part,
+          type: 'folder' as const,
+          path: currentPath,
+          children: []
+        };
+        
+        currentNode.children.push(newFolder);
+        currentNode = newFolder;
+      } else {
+        currentNode = existingNode;
+      }
+    }
     
-    return currentNode.children[currentNode.children.length - 1];
+    return currentNode;
   }, []);
 
   const executeFileOperation = useCallback((step: Step) => {
@@ -78,54 +94,45 @@ export const useFileOperations = (initialFileStructure: fileItems) => {
           case StepType.CreateFile: {
             if (!step.path) break;
             
-            let flag = false
             const path = step.path;
-            if(path.includes('/')) {
-              const components = path.split('/')
-              const folderName = components[0];
-              const fileName = components[1];
-              const folderNode = findNodeByPath(newStructure, `/${folderName}`);
-              if (folderNode) {
-                folderNode.children.map((ch) => {
-                  if(ch.name == fileName){
-                    flag = true
-                    ch.content = step.code
-                  }
-                })
-
-                if(!flag){
-                  folderNode.children.push({ 
-                    name: fileName, 
-                    type: 'file', 
-                    path: `/my-app/${path}`, 
-                    content: step.code || '' 
-                  });
+            const pathParts = path.split('/').filter(part => part !== '');
+            
+            if (pathParts.length === 0) break;
+            
+            const fileName = pathParts[pathParts.length - 1];
+            const dirPath = pathParts.slice(0, -1).join('/');
+            
+            let targetNode = newStructure;
+            
+            // If there are directories in the path, ensure they exist
+            if (dirPath) {
+              targetNode = ensureDirectoryExists(newStructure, dirPath);
+            }
+            
+            // Check if file already exists and update it
+            let fileExists = false;
+            if (targetNode.children) {
+              for (const child of targetNode.children) {
+                if (child.name === fileName && child.type === 'file') {
+                  child.content = step.code || '';
+                  fileExists = true;
+                  break;
                 }
-              }
-              else{
-                const newFolder = createNestedFolders(newStructure, folderName, '/my-app');
-                newFolder.children.push({ 
-                  name: fileName, 
-                  type: 'file',
-                  path: `/my-app/${path}`, 
-                  content: step.code || '' 
-                });
               }
             }
-            else {
-              let flag = false
-              newStructure.children.map((ch) => {
-                if(ch.name == path){
-                  flag = true
-                  ch.content = step.code
-                }
-              })
-
-              if(flag) break;
-              newStructure.children.push({ 
-                name: path, 
+            
+            // Create new file if it doesn't exist
+            if (!fileExists) {
+              if (!targetNode.children) {
+                targetNode.children = [];
+              }
+              
+              const fullPath = dirPath ? `/my-app/${dirPath}/${fileName}` : `/my-app/${fileName}`;
+              
+              targetNode.children.push({
+                name: fileName,
                 type: 'file',
-                path: `/my-app/${path}`,
+                path: fullPath,
                 content: step.code || ''
               });
             }
@@ -136,7 +143,13 @@ export const useFileOperations = (initialFileStructure: fileItems) => {
             if (!step.path) break;
             
             const pathParts = step.path.split('/').filter(part => part !== '');
-            createNestedFolders(newStructure, pathParts.slice(1), '/my-app');
+            if (pathParts.length > 0) {
+              // Remove the first part if it's 'my-app' to avoid duplication
+              const folderPath = pathParts[0] === 'my-app' ? pathParts.slice(1).join('/') : pathParts.join('/');
+              if (folderPath) {
+                ensureDirectoryExists(newStructure, folderPath);
+              }
+            }
             break;
           }
           
@@ -173,7 +186,7 @@ export const useFileOperations = (initialFileStructure: fileItems) => {
       
       return newStructure;
     });
-  }, [findNodeByPath, findParentAndIndex, createNestedFolders]);
+  }, [findNodeByPath, findParentAndIndex, ensureDirectoryExists]);
 
   const resetFileStructure = useCallback(() => {
     setFileStructure(initialFileStructure);
